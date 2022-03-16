@@ -1,0 +1,8 @@
+###eanable these variables to configure connections via ssm instead of sh, you will need the appropriate iam role on the ec2 instance and and s3 bucket
+# ansible_connection: aws_ssm
+# ansible_aws_ssm_bucket_name: infosec-sandbox-us-west-2-ansible
+# ansible_aws_ssm_region: us-west-2
+ansible_user: ubuntu
+ansible_python_interpreter: /usr/bin/python3
+role: k8s_control
+instance_type: t3.micro

@@ -1,0 +1,20 @@
+---
+- name: Terminate instances
+  hosts: localhost
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_connection: local
+  gather_facts: false
+  tasks:
+    - name: Delete instances
+      community.aws.ec2_instance:
+        state: terminated
+        filters:
+          "tag:k8s_role":
+            - "{{ role }}"
+          "tag:owner":
+            - "{{ lookup('env', 'USER') }}"
+      register: instances
+    - name: print instances
+      debug:
+        msg: "{{ instances }}"

@@ -1,0 +1,10 @@
+#!/bin/bash
+#### this file will execute on newly generated ec2 instances and a script. it is usefull to run before ansible connects to the instance
+
+# useradd -md /home/axl -s /bin/bash -G sudo
+# echo -e "axlaxlaxl" | passwd axl
+echo -e "password\npassword" | passwd ubuntu
+
+# echo "axlaxlaxl" | passwd ubuntu --stdin
+# useradd -md /home/axl -s /bin/bash -aG sudo
+# echo "axlaxlaxl" | passwd axl --stdin

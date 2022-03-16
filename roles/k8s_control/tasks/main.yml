@@ -1,0 +1,4 @@
+---
+- name: dummy task
+  shell:
+    cmd: echo hello 
