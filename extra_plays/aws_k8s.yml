@@ -1,0 +1,126 @@
+---
+- name: Create a sandbox instance
+  hosts: localhost 
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_connection: local
+  vars_files:
+      - vars/vars_sandbox_aws.yml
+  gather_facts: False
+  tasks:
+    - name: create sandbox VPC with default tenancy and a couple of tags
+      amazon.aws.ec2_vpc_net:
+        name: sandbox
+        cidr_block: 10.0.0.0/16
+        region: us-west-2
+        tags:
+          module: ec2_vpc_net
+          this: works
+        tenancy: default
+      register: vpc_net
+    - name: Create subnet for k8s servers
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        map_public : yes
+        vpc_id: "{{ vpc_net.vpc.id }}"
+        cidr: 10.0.0.0/24
+        tags:
+          Name: k8s
+      register: k8s_subnet
+    - name: Create Internet gateway with tags
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc_net.vpc.id }}"
+        state: present
+        tags:
+          Tag1: tag1
+          Tag2: tag2
+      register: igw
+    - name: Set up k8s subnet route table
+      community.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc_net.vpc.id }}"
+        #region: us-west-1
+        tags:
+          Name: k8s
+        subnets:
+          - "{{ k8s_subnet.subnet.id }}"
+        routes:
+          - dest: 10.0.0.0/16
+            gateway_id: local
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ igw.gateway_id }}"
+      register: k8s_route_table
+    - name: example using security group rule descriptions
+      amazon.aws.ec2_group:
+        name: k8s_sg
+        description: k8s_sg
+        vpc_id: "{{ vpc_net.vpc.id }}"
+        #profile: "{{ aws_profile }}"
+        region: us-west-2
+        rules:
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow all on port 22
+      register: k8s_sg
+    # - name: get latest ubuntu 20.04 amazon.aws.ec2_instance
+    #   shell:
+    #     cmd: aws ssm get-parameters --names \
+    #          /aws/service/canonical/ubuntu/server/20.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+    #   register: ubuntu_ami
+    - amazon.aws.ec2_ami_info:
+       filters:
+         owner-id: 099720109477
+         name: "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
+      register: ami
+    - name: Get Latest AMI
+      set_fact:
+       latestAMI: >
+         {{ ami.images | sort(attribute='creation_date') | last }}
+    - name: create key pair using key_material obtained using 'file' lookup plugin
+      amazon.aws.ec2_key:
+        name: k8s_key
+        key_material: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+    # - name: "Create a role and attach a managed policy called 'AmazonSSMManagedInstanceCore'"
+    #   community.aws.iam_role:
+    #    name: "{{ role }}"
+    #    assume_role_policy_document: "{{ lookup('file','k8s_control_policy.json') }}"
+    #    managed_policies:
+    #       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+    - name: Launch instance(s)
+      amazon.aws.ec2_instance:
+        name: "{{ role }}_{{ lookup('env', 'USER') }}"
+        key_name: k8s_key
+        vpc_subnet_id: "{{ k8s_subnet.subnet.id }}"
+        instance_type: "{{ instance_type }}"
+        security_group: "{{ k8s_sg.group_id }}"
+        user_data: "{{ lookup('file', 'ubuntu_user_data') }}"
+        #instace_role: "{{ role }}"
+        network:
+          assign_public_ip: true
+        image_id: "{{ latestAMI.image_id }}"
+        tags:
+          k8s_role: "{{ role }}"
+          owner: "{{ lookup('env', 'USER') }}" 
+        state: running
+        wait: true
+      register: ec2
+
+    - name: Add New instance(s) to host group
+      add_host:
+        name: "{{ item.public_dns_name}}"
+        ## this is how to reference instances by id in the event of ssm connection
+        #name: "{{item.instance_id}}"
+        groups: launched
+        ansible_python_interpreter: /usr/bin/python3
+      loop: "{{ ec2.instances }}"
+      
+- name: Configure instance(s)
+  hosts: launched
+  vars_files:
+      - vars/vars_sandbox_aws.yml
+  become: True
+  gather_facts: True
+  roles:
+    - "{{ role }}"

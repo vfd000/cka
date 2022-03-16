@@ -1,0 +1,10 @@
+# scli_aws_ec2.yml (Splunk cloud log insgestion Dynamic Inventory)
+plugin: aws_ec2
+regions:
+    - us-west-2
+hostnames:
+    - instance-id
+keyed_groups:
+ # Create a group (or groups) based on the value of a custom tags "k8s_role" and add them to a metagroup called "k8s"
+  - key: tags['k8s_role']
+    parent_group: "k8s"
