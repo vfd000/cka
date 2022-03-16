@@ -1,4 +1,4 @@
 ---
-- name: dummy task
-  shell:
-    cmd: echo hello 
+- name: Install k8s
+  include_role:
+    name: k8s
