@@ -4,5 +4,4 @@
 # ansible_aws_ssm_region: us-west-2
 ansible_user: ubuntu
 ansible_python_interpreter: /usr/bin/python3
-role: k8s_control
 instance_type: t3.micro

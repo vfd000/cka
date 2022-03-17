@@ -1,0 +1,52 @@
+---
+- name: Create k8s_control
+  hosts: localhost 
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_connection: local
+    role: k8s_control
+  vars_files:
+      - vars/vars_sandbox_aws.yml
+  gather_facts: False
+  tasks:
+    - name: Launch {{ role }} instance(s)
+      amazon.aws.ec2_instance:
+        name: "{{ role }}_{{ item }}_{{ lookup('env', 'USER') }}"
+        key_name: k8s_key
+        vpc_subnet_id: "{{ k8s_subnet.subnet.id }}"
+        instance_type: "{{ instance_type }}"
+        security_group: "{{ k8s_sg.group_id }}"
+        #user_data: "{{ lookup('file', 'ubuntu_user_data') }}"  ### use this to take action on your ec2 instance before connecting with ssh or ansible
+        #instace_role: "{{ role }}"  #### use this to assign a previously created iam role to your ec2 instance
+        network:
+          assign_public_ip: true
+        image_id: "{{ latestAMI.image_id }}"
+        tags:
+          k8s_role: "{{ role }}"
+          owner: "{{ lookup('env', 'USER') }}" 
+        state: running
+        wait: true
+      loop:
+        - 01
+    - name: Register k8s_nose(s) 
+      amazon.aws.ec2_instance_info:
+          filters:
+                "tag:k8s_role": "{{ role }}"
+                "tag:owner": "{{ lookup('env', 'USER') }}"
+                instance-state-name: [ "running"]
+      register: k8s_control
+
+    - name: Add New instance(s) to k8s_control group
+      add_host:
+        name: "{{item.public_dns_name}}"
+        groups: k8s_control
+        ansible_python_interpreter: /usr/bin/python3
+        #### this is how you pass info about one instance to another
+        # idx_manager_ip: "{{ k8s_control.instances[0].private_ip_address }}"
+      loop: "{{ k8s_control.instances }}"
+      tags: restart_k8s_control
+
+    - set_fact:
+        inst_list: "{{ inst_list|default([]) + [item.instance_id] }}"
+      loop: "{{ k8s_control.instances }}"
+      

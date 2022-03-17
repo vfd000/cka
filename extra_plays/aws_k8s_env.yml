@@ -1,5 +1,5 @@
 ---
-- name: Create a sandbox instance
+- name: Create a sandbox environment in which to run kubernetes
   hosts: localhost 
   vars:
     ansible_python_interpreter: /usr/bin/python3
@@ -88,39 +88,3 @@
     #    assume_role_policy_document: "{{ lookup('file','k8s_control_policy.json') }}"
     #    managed_policies:
     #       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-    - name: Launch instance(s)
-      amazon.aws.ec2_instance:
-        name: "{{ role }}_{{ lookup('env', 'USER') }}"
-        key_name: k8s_key
-        vpc_subnet_id: "{{ k8s_subnet.subnet.id }}"
-        instance_type: "{{ instance_type }}"
-        security_group: "{{ k8s_sg.group_id }}"
-        #user_data: "{{ lookup('file', 'ubuntu_user_data') }}"  ### use this to take action on your ec2 instance before connecting with ssh or ansible
-        #instace_role: "{{ role }}"  #### use this to assign a previously created iam role to your ec2 instance
-        network:
-          assign_public_ip: true
-        image_id: "{{ latestAMI.image_id }}"
-        tags:
-          k8s_role: "{{ role }}"
-          owner: "{{ lookup('env', 'USER') }}" 
-        state: running
-        wait: true
-      register: ec2
-
-    - name: Add New instance(s) to host group
-      add_host:
-        name: "{{ item.public_dns_name}}"
-        ## this is how to reference instances by id in the event of ssm connection
-        #name: "{{item.instance_id}}"
-        groups: launched
-        ansible_python_interpreter: /usr/bin/python3
-      loop: "{{ ec2.instances }}"
-      
-- name: Configure instance(s)
-  hosts: launched
-  vars_files:
-      - vars/vars_sandbox_aws.yml
-  become: True
-  gather_facts: True
-  roles:
-    - "{{ role }}"
