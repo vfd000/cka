@@ -1,4 +1,5 @@
 ---
+### health check instances before config
 - name: check instance status should be state ok
   hosts: localhost
   vars:
@@ -15,6 +16,7 @@
     delay: 15    # 15*40 = 600 ~= 10 mins
     loop: "{{ inst_list }}"
     
+# basic k8s config
 - name: Configure instance(s)
   hosts: k8s_control
   vars_files:
@@ -23,7 +25,7 @@
   gather_facts: True
   roles:
     - k8s_control
-
+  
 - name: Configure instance(s)
   hosts: k8s_node
   vars_files:
@@ -32,3 +34,19 @@
   gather_facts: True
   roles:
     - k8s_node
+
+## bring up the cluster
+- name: return_join_command
+  hosts: k8s_control
+  tasks:
+    - include_tasks: roles/k8s_control/tasks/return_join_command.yml
+  vars_files:
+    - vars/vars_sandbox_aws.yml
+
+- name: return_join_command
+  hosts: k8s_node
+  tasks:
+    - include_tasks: roles/k8s_node/tasks/join_nodes.yml
+  vars_files:
+    - vars/vars_sandbox_aws.yml
+  

@@ -1,0 +1,4 @@
+- name: Join the Worker Nodes to the Cluster
+  shell:
+    cmd: "{{ hostvars['k8s_info_holder']['join_command'] }}"
+  become: yes
