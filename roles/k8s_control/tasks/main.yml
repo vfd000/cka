@@ -2,3 +2,30 @@
 - name: Install k8s
   include_role:
     name: k8s
+
+- name: Initialize the Kubernetes cluster on the control plane node using kubeadm
+  shell:
+    cmd: kubeadm init --pod-network-cidr 192.168.0.0/16 --kubernetes-version 1.23.0
+  become: true
+  ignore_errors: true
+
+- name: make kubernetes config directory
+  ansible.builtin.file: 
+    dest: ~{{ ansible_user }}/.kube
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: copy kubernetes config
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    remote_src: true
+    dest:  ~{{ ansible_user }}/.kube/config
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: install Calico Networking
+  shell:
+    cmd: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+  become: false
+  ignore_errors: true

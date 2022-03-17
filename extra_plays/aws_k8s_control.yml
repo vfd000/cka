@@ -14,7 +14,7 @@
         name: "{{ role }}_{{ item }}_{{ lookup('env', 'USER') }}"
         key_name: k8s_key
         vpc_subnet_id: "{{ k8s_subnet.subnet.id }}"
-        instance_type: "{{ instance_type }}"
+        instance_type: "{{ k8s_control_instance_type }}"
         security_group: "{{ k8s_sg.group_id }}"
         #user_data: "{{ lookup('file', 'ubuntu_user_data') }}"  ### use this to take action on your ec2 instance before connecting with ssh or ansible
         #instace_role: "{{ role }}"  #### use this to assign a previously created iam role to your ec2 instance
