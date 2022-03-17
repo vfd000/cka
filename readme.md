@@ -44,7 +44,9 @@ cka demo environment on public clouds
 # Commands
 ## list inventory
     ansible-inventory --list | jq '.'
-## ssh 2 EC2 instance
+## Stand up a full k8s stack
+    ansible-playbook extra_plays/aws_k8s_deploy.yml
+## ssh to EC2 instance
 ### by k8s_role
     ssh -l ubuntu $(ansible-inventory --host $(ansible-inventory --list | jq '._k8s_control.hosts[0]' -r) | jq '.network_interfaces[0].association.public_ip' -r)
     

@@ -1,0 +1,9 @@
+---
+- name: aws_k8s_env.yml
+  import_playbook: aws_k8s_env.yml
+- name: aws_k8s_control.yml
+  import_playbook: aws_k8s_control.yml
+- name: aws_k8s_node.yml
+  import_playbook: aws_k8s_node.yml
+- name: aws_k8s_config.yml
+  import_playbook: aws_k8s_config.yml
