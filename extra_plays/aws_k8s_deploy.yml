@@ -1,9 +1,21 @@
 ---
-- name: aws_k8s_env.yml
+#set up ENV
+- name: set up the aws environment (vpc/subnet/route) aws_k8s_env.yml
   import_playbook: aws_k8s_env.yml
+#set up k8s_control instance(s)
 - name: aws_k8s_control.yml
   import_playbook: aws_k8s_control.yml
+- name: "Build k8s_control inventory"
+  import_playbook: aws_k8s_build_inventory.yml
+  vars:
+    role: k8s_control
+#set up k8s_node instance(s)
 - name: aws_k8s_node.yml
   import_playbook: aws_k8s_node.yml
+- name: "Build k8s_node inventory"
+  import_playbook: aws_k8s_build_inventory.yml
+  vars:
+    role: k8s_node
+## Health check and run roles on intance(s) 
 - name: aws_k8s_config.yml
   import_playbook: aws_k8s_config.yml
