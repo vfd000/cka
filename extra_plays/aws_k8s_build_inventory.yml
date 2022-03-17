@@ -1,0 +1,35 @@
+---
+- name: Create a kubernetes nodes
+  hosts: localhost 
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_connection: local
+    #role: k8s_control
+  vars_files:
+      - vars/vars_sandbox_aws.yml
+  gather_facts: False
+  tags: 
+    - restart_{{ role }}
+  tasks:
+    - name: Register {{ role }}(s) 
+      amazon.aws.ec2_instance_info:
+          filters:
+                "tag:k8s_role": "{{ role }}"
+                "tag:owner": "{{ lookup('env', 'USER') }}"
+                instance-state-name: [ "running"]
+      register: info_group
+
+    - name: Add New instance(s) to {{ role }} group
+      add_host:
+        name: "{{item.public_dns_name}}"
+        groups: "{{ role }}"
+        ansible_python_interpreter: /usr/bin/python3
+        #### this is how you pass info about one instance to another
+        # idx_manager_ip: "{{ k8s_control.instances[0].private_ip_address }}"
+      loop: "{{ info_group.instances }}"
+      tags: restart_{{ role }}
+
+    - name: add {{ role }} instance(s) to inst_list
+      set_fact:
+        inst_list: "{{ inst_list|default([]) + [item.instance_id] }}"
+      loop: "{{ info_group.instances }}"
