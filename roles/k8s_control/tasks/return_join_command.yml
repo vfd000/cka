@@ -1,0 +1,10 @@
+---
+- name: get join command
+  shell:
+    cmd: kubeadm token create --print-join-command
+  register: return_join_command
+
+- name: "Add K8S join command to dummy host"
+  add_host:
+    name:   "k8s_info_holder"
+    join_command:  "{{ return_join_command.stdout }}"

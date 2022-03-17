@@ -29,3 +29,5 @@
     cmd: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
   become: false
   ignore_errors: true
+
+- include_tasks: return_join_command.yml
